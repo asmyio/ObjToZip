@@ -4,6 +4,9 @@ import json
 import boto3
 import zipfile
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 def lambda_handler(event, context):
     try:
         for record in event['Records']:
@@ -11,7 +14,7 @@ def lambda_handler(event, context):
             object_key = record['s3']['object']['key']
             logging.info(f"new object '{object_key}' uploaded to bucket '{bucket_name}'")
     except Exception as e:
-        print(e)
+        logger.error(e, exc_info=True)
 
 def download_from_s3(bucket_name, key):
     try:
@@ -21,7 +24,7 @@ def download_from_s3(bucket_name, key):
         return file_path
     
     except Exception as e:
-        print(f"An error occurred while downloading from S3 bucket: {bucket_name}: {e}")
+        logger.error(f"An error occurred while downloading from S3 bucket: {bucket_name}: {e}")
         return None
     
 def compress_object_to_zip(source_file):
@@ -35,25 +38,25 @@ def compress_object_to_zip(source_file):
         return True
     
     except Exception as e:
-        print(f"Compression failed: {str(e)}")
+        logger.error(f"Compression failed: {str(e)}")
         return False
 
 def upload_to_s3(file_path, bucket_name, key):
     try:
         s3 = boto3.client('s3')
         s3.upload_file(file_path, bucket_name, key)
-        print("Upload successful")
+        logger.info("Upload successful")
         return True
     except Exception as e:
-        print(f"Upload failed: {e}")
+        logger.error(f"Upload failed: {e}")
         return False
 
 def delete_from_s3(bucket_name, key):
     try:
         s3 = boto3.client('s3')
         s3.delete_object(Bucket=bucket_name, Key=key)
-        print("Object deleted successfully")
+        logger.info("Object deleted successfully")
         return True
     except Exception as e:
-        print(f"Deletion failed: {e}")
+        logger.error(f"Deletion failed: {e}")
         return False
