@@ -3,6 +3,7 @@ import os
 import json
 import boto3
 import zipfile
+import magic
 from http import HTTPStatus
 
 logger = logging.getLogger()
@@ -18,6 +19,11 @@ def lambda_handler(event, context):
             downloaded_file = download_from_s3(bucket_name, object_key)
             if downloaded_file is None:
                 logging.error(f"Download Error: S3 Object '{object_key}' from '{bucket_name}'")
+                continue
+
+            file_type = magic.from_file(downloaded_file, mime=True)
+            if file_type == 'application/zip':
+                logging.error(f"File Already In Compressed Format: S3 Object '{object_key}' from '{bucket_name}'")
                 continue
 
             compressed_file = compress_object_to_zip(downloaded_file)
