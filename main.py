@@ -40,8 +40,15 @@ def upload_to_s3(file_path, bucket_name, key):
         print(f"Upload failed: {e}")
         return False
 
-def delete_object_from_s3():
-    pass 
+def delete_from_s3(bucket_name, key):
+    try:
+        s3 = boto3.client('s3')
+        s3.delete_object(Bucket=bucket_name, Key=key)
+        print("Object deleted successfully")
+        return True
+    except Exception as e:
+        print(f"Deletion failed: {e}")
+        return False
 
 def main(): 
     pass 
