@@ -2,7 +2,7 @@ import os
 import boto3
 import zipfile
 
-def s3_check():
+def lambda_handler(event, context):
     pass
 
 def download_from_s3(bucket_name, key):
@@ -49,9 +49,3 @@ def delete_from_s3(bucket_name, key):
     except Exception as e:
         print(f"Deletion failed: {e}")
         return False
-
-def main(): 
-    pass 
-
-if __name__ == "__main__":
-    main()
