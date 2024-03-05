@@ -10,16 +10,32 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     try:
-        for record in event['Records']:
+        for record in event.get('Records', []):
             bucket_name = record['s3']['bucket']['name']
             object_key = record['s3']['object']['key']
-            logging.info(f"new object '{object_key}' uploaded to bucket '{bucket_name}'")
+            logging.info(f"New object '{object_key}' uploaded to bucket '{bucket_name}'")
+
+            downloaded_file = download_from_s3(bucket_name, object_key)
+            if downloaded_file is None:
+                logging.error(f"Download Error: S3 Object '{object_key}' from '{bucket_name}'")
+                continue
+
+            compressed_file = compress_object_to_zip(downloaded_file)
+            if compressed_file is None:
+                logging.error(f"Compression Error: S3 Object '{object_key}' from '{bucket_name}'")
+                continue
+
+            if not upload_to_s3(compressed_file, bucket_name, object_key):
+                logging.error(f"Upload Error: S3 Object '{object_key}' to '{bucket_name}'")
+                continue
+
+            delete_from_s3(bucket_name, object_key)
 
     except Exception as e:
         logging.error(e, exc_info=True)
 
     return {
-    "statusCode": HTTPStatus.OK.value
+        "statusCode": HTTPStatus.OK.value
     }
 
 def download_from_s3(bucket_name, key):
