@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import zipfile
-from main import compress_object_to_zip, download_from_s3, upload_to_s3
+from main import compress_object_to_zip, download_from_s3, upload_to_s3, delete_from_s3
 from unittest.mock import Mock, patch
 
 @pytest.fixture
@@ -69,4 +69,27 @@ def test_upload_to_s3_failure(s3_client_mock):
 
     s3_client_mock.assert_called_once_with('s3')
     s3_client_mock.return_value.upload_file.assert_called_once_with(file_path, bucket_name, key)
+    assert result is False
+
+def test_delete_object_from_s3_success(s3_client_mock):
+    bucket_name = 'test-bucket'
+    key = 'test-file.txt'
+
+    s3_client_mock.return_value.delete_object = Mock()
+    result = delete_from_s3(bucket_name, key)
+
+    s3_client_mock.assert_called_once_with('s3')
+    s3_client_mock.return_value.delete_object.assert_called_once_with(Bucket=bucket_name, Key=key)
+    assert result is True
+
+def test_delete_object_from_s3_failure(s3_client_mock):
+    bucket_name = 'test-bucket'
+    key = 'test-file.txt'
+
+    s3_client_mock.return_value.delete_object = Mock(side_effect=Exception('Deletion failed'))
+
+    result = delete_from_s3(bucket_name, key)
+
+    s3_client_mock.assert_called_once_with('s3')
+    s3_client_mock.return_value.delete_object.assert_called_once_with(Bucket=bucket_name, Key=key)
     assert result is False
