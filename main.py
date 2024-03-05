@@ -30,8 +30,15 @@ def compress_object_to_zip(source_file):
         print(f"Compression failed: {str(e)}")
         return False
 
-def upload_to_s3():
-    pass 
+def upload_to_s3(file_path, bucket_name, key):
+    try:
+        s3 = boto3.client('s3')
+        s3.upload_file(file_path, bucket_name, key)
+        print("Upload successful")
+        return True
+    except Exception as e:
+        print(f"Upload failed: {e}")
+        return False
 
 def delete_object_from_s3():
     pass 
