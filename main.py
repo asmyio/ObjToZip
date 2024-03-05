@@ -1,9 +1,17 @@
+import logging
 import os
+import json
 import boto3
 import zipfile
 
 def lambda_handler(event, context):
-    pass
+    try:
+        for record in event['Records']:
+            bucket_name = record['s3']['bucket']['name']
+            object_key = record['s3']['object']['key']
+            logging.info(f"new object '{object_key}' uploaded to bucket '{bucket_name}'")
+    except Exception as e:
+        print(e)
 
 def download_from_s3(bucket_name, key):
     try:
