@@ -14,6 +14,7 @@ def lambda_handler(event, context):
             bucket_name = record['s3']['bucket']['name']
             object_key = record['s3']['object']['key']
             logging.info(f"new object '{object_key}' uploaded to bucket '{bucket_name}'")
+
     except Exception as e:
         logging.error(e, exc_info=True)
 
@@ -40,11 +41,11 @@ def compress_object_to_zip(source_file):
 
         with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
             zipf.write(source_file, file_name)
-        return True
+        return output_zip
     
     except Exception as e:
         logging.error(f"Compression failed: {str(e)}")
-        return False
+        return None
 
 def upload_to_s3(file_path, bucket_name, key):
     try:
