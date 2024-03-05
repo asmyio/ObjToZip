@@ -1,9 +1,41 @@
+import logging
 import os
 import tempfile
 import pytest
 import zipfile
-from main import compress_object_to_zip, download_from_s3, upload_to_s3, delete_from_s3
+from main import compress_object_to_zip, download_from_s3, upload_to_s3, delete_from_s3, lambda_handler
 from unittest.mock import Mock, patch
+from http import HTTPStatus
+
+@patch('main.logging')
+def test_lambda_handler_with_records(mock_logging):
+    mock_event = {
+        "Records": [
+            {
+                "s3": {
+                    "bucket": {
+                        "name": "test-bucket"
+                    },
+                    "object": {
+                        "key": "test-file.txt"
+                    }
+                }
+            }
+        ]
+    }
+
+    response = lambda_handler(mock_event, None)
+    mock_logging.info.assert_called_once_with("new object 'test-file.txt' uploaded to bucket 'test-bucket'")
+
+    assert response == {"statusCode": HTTPStatus.OK.value}
+
+@patch('main.logging')
+def test_lambda_handler_without_records(mock_logging):
+    mock_event = {}
+    response = lambda_handler(mock_event, None)
+    mock_logging.error.assert_called()
+
+    assert response == {"statusCode": HTTPStatus.OK.value}
 
 @pytest.fixture
 def source_file():
