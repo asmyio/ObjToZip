@@ -15,7 +15,7 @@ def lambda_handler(event, context):
             object_key = record['s3']['object']['key']
             logging.info(f"new object '{object_key}' uploaded to bucket '{bucket_name}'")
     except Exception as e:
-        logger.error(e, exc_info=True)
+        logging.error(e, exc_info=True)
 
     return {
     "statusCode": HTTPStatus.OK.value
@@ -29,7 +29,7 @@ def download_from_s3(bucket_name, key):
         return file_path
     
     except Exception as e:
-        logger.error(f"An error occurred while downloading from S3 bucket: {bucket_name}: {e}")
+        logging.error(f"An error occurred while downloading from S3 bucket: {bucket_name}: {e}")
         return None
     
 def compress_object_to_zip(source_file):
@@ -43,25 +43,25 @@ def compress_object_to_zip(source_file):
         return True
     
     except Exception as e:
-        logger.error(f"Compression failed: {str(e)}")
+        logging.error(f"Compression failed: {str(e)}")
         return False
 
 def upload_to_s3(file_path, bucket_name, key):
     try:
         s3 = boto3.client('s3')
         s3.upload_file(file_path, bucket_name, key)
-        logger.info("Upload successful")
+        logging.info("Upload successful")
         return True
     except Exception as e:
-        logger.error(f"Upload failed: {e}")
+        logging.error(f"Upload failed: {e}")
         return False
 
 def delete_from_s3(bucket_name, key):
     try:
         s3 = boto3.client('s3')
         s3.delete_object(Bucket=bucket_name, Key=key)
-        logger.info("Object deleted successfully")
+        logging.info("Object deleted successfully")
         return True
     except Exception as e:
-        logger.error(f"Deletion failed: {e}")
+        logging.error(f"Deletion failed: {e}")
         return False
