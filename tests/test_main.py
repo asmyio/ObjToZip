@@ -29,21 +29,48 @@ def test_lambda_handler_success(sample_event):
          patch('main.download_from_s3') as mock_download, \
          patch('main.compress_object_to_zip') as mock_compress, \
          patch('main.upload_to_s3') as mock_upload, \
-         patch('main.delete_from_s3') as mock_delete:
+         patch('main.delete_from_s3') as mock_delete, \
+         patch('main.magic.from_file') as mock_magic:
 
         mock_download.return_value = 'downloaded_file.txt'
         mock_compress.return_value = 'compressed_file.zip'
         mock_upload.return_value = True
+        mock_magic.return_value = 'text/plain'
 
         result = lambda_handler(sample_event, None)
 
         assert mock_logging.info.call_count == 1
-        assert mock_logging.error.call_count == 0
+        mock_logging.error.assert_not_called() 
 
         mock_download.assert_called_once_with('test-bucket', 'test-file.txt')
         mock_compress.assert_called_once_with('downloaded_file.txt')
         mock_upload.assert_called_once_with('compressed_file.zip', 'test-bucket', 'test-file.txt')
         mock_delete.assert_called_once_with('test-bucket', 'test-file.txt')
+
+        assert result == {"statusCode": HTTPStatus.OK.value}
+
+def test_lambda_handler_failure(sample_event):
+    with patch('main.logging') as mock_logging, \
+         patch('main.download_from_s3') as mock_download, \
+         patch('main.compress_object_to_zip') as mock_compress, \
+         patch('main.upload_to_s3') as mock_upload, \
+         patch('main.delete_from_s3') as mock_delete, \
+         patch('main.magic.from_file') as mock_magic:
+
+        mock_download.return_value = 'downloaded_file.txt'
+        mock_compress.return_value = 'compressed_file.zip'
+        mock_upload.return_value = True
+        mock_magic.return_value = 'application/zip'
+
+        result = lambda_handler(sample_event, None)
+
+        assert mock_logging.info.call_count == 1
+        assert mock_logging.error.call_count == 1
+
+        mock_download.assert_called_once_with('test-bucket', 'test-file.txt')
+        mock_compress.assert_not_called()
+        mock_upload.assert_not_called()
+        mock_delete.assert_not_called() 
 
         assert result == {"statusCode": HTTPStatus.OK.value}
 
