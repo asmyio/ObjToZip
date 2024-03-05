@@ -2,7 +2,7 @@ import os
 import tempfile
 import pytest
 import zipfile
-from main import compress_object_to_zip, download_from_s3
+from main import compress_object_to_zip, download_from_s3, upload_to_s3
 from unittest.mock import Mock, patch
 
 @pytest.fixture
@@ -44,3 +44,29 @@ def test_download_from_s3(s3_client_mock):
     s3_client_mock.return_value.download_file.assert_called_once_with(bucket_name, key, expected_file_path)
 
     assert file_path == expected_file_path
+
+def test_upload_to_s3_success(s3_client_mock):
+    file_path = '/path/to/file.txt'
+    bucket_name = 'test-bucket'
+    key = 'test-file.txt'
+
+    s3_client_mock.return_value.upload_file = Mock()
+
+    result = upload_to_s3(file_path, bucket_name, key)
+
+    s3_client_mock.assert_called_once_with('s3')
+    s3_client_mock.return_value.upload_file.assert_called_once_with(file_path, bucket_name, key)
+    assert result is True
+
+def test_upload_to_s3_failure(s3_client_mock):
+    file_path = '/path/to/file.txt'
+    bucket_name = 'test-bucket'
+    key = 'test-file.txt'
+
+    s3_client_mock.return_value.upload_file = Mock(side_effect=Exception('Upload failed'))
+
+    result = upload_to_s3(file_path, bucket_name, key)
+
+    s3_client_mock.assert_called_once_with('s3')
+    s3_client_mock.return_value.upload_file.assert_called_once_with(file_path, bucket_name, key)
+    assert result is False
