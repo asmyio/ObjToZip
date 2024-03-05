@@ -2,7 +2,8 @@ import os
 import tempfile
 import pytest
 import zipfile
-from main import compress_object_to_zip
+from main import compress_object_to_zip, download_from_s3
+from unittest.mock import Mock, patch
 
 @pytest.fixture
 def source_file():
@@ -24,3 +25,22 @@ def test_compress_object_to_zip(source_file):
 def test_compress_object_to_zip_failure():
     assert not compress_object_to_zip("nonexistent_file.txt")
     os.remove("nonexistent_file.zip")
+
+@pytest.fixture
+def s3_client_mock():
+    with patch('boto3.client') as mock:
+        yield mock
+
+def test_download_from_s3(s3_client_mock):
+
+    bucket_name = 'test-bucket'
+    key = 'test-file.txt'
+    expected_file_path = f"/tmp/{os.path.basename(key)}"
+
+    s3_client_mock.return_value.download_file = Mock()
+    file_path = download_from_s3(bucket_name, key)
+
+    s3_client_mock.assert_called_once_with('s3')
+    s3_client_mock.return_value.download_file.assert_called_once_with(bucket_name, key, expected_file_path)
+
+    assert file_path == expected_file_path
