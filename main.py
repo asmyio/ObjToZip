@@ -3,6 +3,7 @@ import os
 import json
 import boto3
 import zipfile
+from http import HTTPStatus
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -15,6 +16,10 @@ def lambda_handler(event, context):
             logging.info(f"new object '{object_key}' uploaded to bucket '{bucket_name}'")
     except Exception as e:
         logger.error(e, exc_info=True)
+
+    return {
+    "statusCode": HTTPStatus.OK.value
+    }
 
 def download_from_s3(bucket_name, key):
     try:
