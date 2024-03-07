@@ -3,7 +3,7 @@ import os
 import tempfile
 import pytest
 import zipfile
-from main import compress_object_to_zip, download_from_s3, upload_to_s3, delete_from_s3, lambda_handler
+from objtozip.main import compress_object_to_zip, download_from_s3, upload_to_s3, delete_from_s3, lambda_handler
 from unittest.mock import Mock, patch, MagicMock
 from http import HTTPStatus
 
@@ -25,42 +25,44 @@ def sample_event():
     }
 
 def test_lambda_handler_success(sample_event):
-    with patch('main.logging') as mock_logging, \
-         patch('main.download_from_s3') as mock_download, \
-         patch('main.compress_object_to_zip') as mock_compress, \
-         patch('main.upload_to_s3') as mock_upload, \
-         patch('main.delete_from_s3') as mock_delete, \
-         patch('main.magic.from_file') as mock_magic:
+    with patch('objtozip.main.logging') as mock_logging, \
+         patch('objtozip.main.download_from_s3') as mock_download, \
+         patch('objtozip.main.compress_object_to_zip') as mock_compress, \
+         patch('objtozip.main.upload_to_s3') as mock_upload, \
+         patch('objtozip.main.delete_from_s3') as mock_delete, \
+         patch('objtozip.main.filetype.guess') as mock_filetype_guess:
 
         mock_download.return_value = 'downloaded_file.txt'
-        mock_compress.return_value = 'compressed_file.zip'
+        mock_compress.return_value = ('compressed_file.zip', 'compressed_file_key.zip')
         mock_upload.return_value = True
-        mock_magic.return_value = 'text/plain'
+        mock_delete.return_value = True
+        mock_filetype_guess.return_value = None 
 
         result = lambda_handler(sample_event, None)
 
-        assert mock_logging.info.call_count == 1
-        mock_logging.error.assert_not_called() 
+        assert mock_logging.info.call_count == 2
+        mock_logging.error.assert_not_called()
 
         mock_download.assert_called_once_with('test-bucket', 'test-file.txt')
         mock_compress.assert_called_once_with('downloaded_file.txt')
-        mock_upload.assert_called_once_with('compressed_file.zip', 'test-bucket', 'test-file.txt')
+        mock_upload.assert_called_once_with('compressed_file.zip', 'test-bucket', 'compressed_file_key.zip')
         mock_delete.assert_called_once_with('test-bucket', 'test-file.txt')
 
-        assert result == {"statusCode": HTTPStatus.OK.value}
+        assert result == {"statusCode": 200}
 
 def test_lambda_handler_failure(sample_event):
-    with patch('main.logging') as mock_logging, \
-         patch('main.download_from_s3') as mock_download, \
-         patch('main.compress_object_to_zip') as mock_compress, \
-         patch('main.upload_to_s3') as mock_upload, \
-         patch('main.delete_from_s3') as mock_delete, \
-         patch('main.magic.from_file') as mock_magic:
+    with patch('objtozip.main.logging') as mock_logging, \
+         patch('objtozip.main.download_from_s3') as mock_download, \
+         patch('objtozip.main.compress_object_to_zip') as mock_compress, \
+         patch('objtozip.main.upload_to_s3') as mock_upload, \
+         patch('objtozip.main.delete_from_s3') as mock_delete, \
+         patch('objtozip.main.filetype.guess') as mock_filetype_guess:
 
         mock_download.return_value = 'downloaded_file.txt'
         mock_compress.return_value = 'compressed_file.zip'
         mock_upload.return_value = True
-        mock_magic.return_value = 'application/zip'
+        mock_delete.return_value = True
+        mock_filetype_guess.return_value = 'application/zip'
 
         result = lambda_handler(sample_event, None)
 
@@ -72,7 +74,7 @@ def test_lambda_handler_failure(sample_event):
         mock_upload.assert_not_called()
         mock_delete.assert_not_called() 
 
-        assert result == {"statusCode": HTTPStatus.OK.value}
+        assert result == {"statusCode": 200}
 
 @pytest.fixture
 def source_file():
@@ -83,16 +85,16 @@ def source_file():
         os.remove(temp_file.name)
 
 def test_compress_object_to_zip_success():
-    with patch('main.zipfile.ZipFile') as mock_zipfile:
+    with patch('objtozip.main.zipfile.ZipFile') as mock_zipfile:
 
         mock_zipfile.return_value.__enter__.return_value = MagicMock()
         mock_zipfile.return_value.__exit__.return_value = False
 
-        output_zip = compress_object_to_zip('/tmp/test-file.txt')
+        output_zip_path, output_zip_name = compress_object_to_zip('/tmp/test-file.txt')
         mock_zipfile.assert_called_once_with('/tmp/test-file.zip', 'w', zipfile.ZIP_DEFLATED)
         mock_zipfile.return_value.__enter__.return_value.write.assert_called_once_with('/tmp/test-file.txt', 'test-file.txt')
 
-        assert output_zip == '/tmp/test-file.zip'
+        assert output_zip_path == '/tmp/test-file.zip', output_zip_name == 'test-file.zip'
 
 def test_compress_object_to_zip_failure():
     assert not compress_object_to_zip("nonexistent_file.txt")
