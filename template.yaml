@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  ObjToZipLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.lambda_handler
+      Runtime: python3.9
+      Timeout: 15
+      CodeUri: ./objtozip/
+      Events:
+        MyS3Event:
+          Type: S3
+          Properties:
+            Bucket: 
+              Ref: ObjToZipS3Bucket
+            Events: s3:ObjectCreated:*
+      Role: !GetAtt ObjToZipLambdaExecutionRole.Arn
+
+  ObjToZipS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: respondio-test-bucket
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: 
+              Fn::GetAtt: [ObjToZipLambdaFunction, Arn]
+
+  ObjToZipLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ObjToZipLambdaExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+        - PolicyName: S3ReadWritePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectTagging
+                  - s3:HeadObject
+                  - s3:DeleteObject
+                Resource: 
+                  - "arn:aws:s3:::respondio-test-bucket/*"
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                Resource: 
+                  - "arn:aws:s3:::respondio-test-bucket/*"
